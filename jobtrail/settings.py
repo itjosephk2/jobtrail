@@ -27,7 +27,6 @@ ALLOWED_HOSTS = [
     'jobtrail-fb164ceb9f58.herokuapp.com',
 ]
 
-                ]
 
 CSRF_TRUSTED_ORIGINS = [
     'http://8000-itjosephk2-jobtrail-wbl9aypm5t2.ws.codeinstitute-ide.net',
