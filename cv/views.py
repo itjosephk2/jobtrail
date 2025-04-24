@@ -1,47 +1,51 @@
+from django.conf import settings
 from django.http import HttpResponse
 from django.template.loader import get_template
-from weasyprint import HTML
 from django.shortcuts import get_object_or_404, render, redirect
-from django.shortcuts import render, redirect
 from django.forms import modelformset_factory
-# views.py
-from django.shortcuts import render, redirect
+
 from .models import CV, ContactDetails, PersonalProfile, EducationItem, HackathonItem, ProjectSkill, Project, Job, SoftSkill
 from .forms import (
     ContactDetailsForm, PersonalProfileForm, EducationFormSet, HackathonFormSet,
     ProjectFormSet, JobFormSet, SoftSkillFormSet
 )
 
-
 def generate_pdf(request):
-    # Get the template and pass any context data you want to render
+    if settings.DEBUG:
+        return HttpResponse(
+            "PDF generation is disabled in development. This feature is available in production.",
+            content_type="text/plain"
+        )
+
+    try:
+        from weasyprint import HTML
+    except ImportError:
+        return HttpResponse(
+            "WeasyPrint is not available. PDF generation failed.",
+            content_type="text/plain"
+        )
+
     template = get_template('create_pdf.html')
     context = {'name': 'John Doe', 'items': ['Item 1', 'Item 2']}
     html_content = template.render(context)
-
-    # Create a PDF using WeasyPrint
     pdf = HTML(string=html_content).write_pdf()
 
-    # Return the PDF as a downloadable response
     response = HttpResponse(pdf, content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename="report.pdf"'
     return response
 
 def create_cv(request):
-    # Fetch or create ContactDetails and CV instances for the current user
     contact_details, _ = ContactDetails.objects.get_or_create(user=request.user)
-    
-    # Check if the user already has a CV
+
     try:
         cv = CV.objects.get(user=request.user)
     except CV.DoesNotExist:
         cv = None
-    
+
     if request.method == 'POST':
         contact_form = ContactDetailsForm(request.POST, instance=contact_details)
         profile_form = PersonalProfileForm(request.POST, instance=cv.personal_profile if cv else None)
 
-        # Formsets
         education_formset = EducationFormSet(request.POST, prefix='education')
         hackathon_formset = HackathonFormSet(request.POST, prefix='hackathon')
         project_formset = ProjectFormSet(request.POST, prefix='projects')
@@ -61,7 +65,6 @@ def create_cv(request):
             personal_profile.user = request.user
             personal_profile.save()
 
-            # If the CV does not exist, create it
             if not cv:
                 cv = CV.objects.create(
                     user=request.user,
@@ -69,12 +72,10 @@ def create_cv(request):
                     personal_profile=personal_profile
                 )
             else:
-                # Update the existing CV with the new contact details and personal profile
                 cv.contact_details = contact_details
                 cv.personal_profile = personal_profile
                 cv.save()
 
-            # Save ManyToMany fields
             for formset, related_field in zip(
                 [education_formset, hackathon_formset, project_formset, job_formset, soft_skill_formset],
                 [cv.education_items, cv.hackathon_items, cv.projects, cv.jobs, cv.soft_skills]
@@ -87,7 +88,6 @@ def create_cv(request):
 
             return redirect('cv_detail', id=cv.id)
     else:
-        # Pre-populate forms and formsets with existing data if available
         contact_form = ContactDetailsForm(instance=contact_details)
         profile_form = PersonalProfileForm(instance=cv.personal_profile if cv else None)
         education_formset = EducationFormSet(queryset=EducationItem.objects.filter(user=request.user), prefix='education')
@@ -106,7 +106,6 @@ def create_cv(request):
         'soft_skill_formset': soft_skill_formset,
     })
 
-
 def cv_detail(request, id):
-    cv = get_object_or_404(CV, id=id, user=request.user)  # Ensure the user is authenticated
+    cv = get_object_or_404(CV, id=id, user=request.user)
     return render(request, 'cv_detail.html', {'cv': cv})
