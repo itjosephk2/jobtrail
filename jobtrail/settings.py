@@ -19,8 +19,11 @@ load_dotenv()
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY")
 
+
 # SECURITY WARNING: don"t run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", False)
+DEBUG = os.getenv("DEBUG", "False") == "True"
+print("DEBUG is", DEBUG)
+
 ALLOWED_HOSTS = [
     '127.0.0.1', 
     '8000-itjosephk2-jobtrail-wbl9aypm5t2.ws.codeinstitute-ide.net',
@@ -31,6 +34,7 @@ ALLOWED_HOSTS = [
 CSRF_TRUSTED_ORIGINS = [
     'http://8000-itjosephk2-jobtrail-wbl9aypm5t2.ws.codeinstitute-ide.net',
     'https://8000-itjosephk2-jobtrail-wbl9aypm5t2.ws.codeinstitute-ide.net',
+    'https://jobtrail-fb164ceb9f58.herokuapp.com',
 ]
 
 # Application definition
@@ -107,18 +111,20 @@ WSGI_APPLICATION = 'jobtrail.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-if not DEBUG:
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if DATABASE_URL:
     DATABASES = {
-        'default': dj_database_url.parse(os.environ.get('DATABASE_URL'))
+        'default': dj_database_url.parse(DATABASE_URL)
     }
 else:
+    print("DATABASE_URL not set. Falling back to SQLite.")
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
